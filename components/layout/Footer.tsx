@@ -8,8 +8,8 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
-            <Link href="/" className="text-xl font-bold text-brand-text">
-              Builders
+            <Link href="/" className="flex items-center">
+              <img src="/logo-full.png" alt="bldrs 로고" style={{ height: 32, width: 'auto', display: 'block' }} />
             </Link>
             <p className="text-sm text-brand-subtext mt-2">
               학생들을 위한 포트폴리오 빌더

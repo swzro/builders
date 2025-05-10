@@ -95,8 +95,8 @@ export default function Header() {
     <header className="bg-brand-surface border-b border-brand-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center">
-          <Link href="/" className="text-xl font-bold text-brand-text">
-            Builders
+          <Link href="/" className="flex items-center">
+            <img src="/logo-full.png" alt="bldrs 로고" style={{ height: 40, width: 'auto', display: 'block' }} />
           </Link>
         </div>
 
@@ -188,6 +188,7 @@ export default function Header() {
           onClick={() => setMenuOpen(!menuOpen)}
           className="md:hidden flex items-center"
         >
+          <img src="/logo-symbol.png" alt="bldrs 심볼" style={{ height: 32, width: 32, marginRight: 8 }} />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 text-brand-subtext"
