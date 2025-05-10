@@ -1,0 +1,124 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Builders 디자인 시스템 가이드
+
+## 🎨 디자인 철학
+Builders는 미니멀한 다크 모드 기반 인터페이스로, Linear와 토스 스타일에 영감을 받아 간결하고 현대적인 디자인을 지향합니다. 사용자의 포트폴리오와 커리어를 강조하면서도 일관된 경험을 제공합니다.
+
+## 🎭 색상 시스템
+Builders는 계층적 색상 시스템을 활용합니다. 모든 색상은 `brand-` 접두사를 사용하여 접근합니다.
+
+### 배경 및 표면
+- `brand-base`: #000000 - 메인 배경 (검정)
+- `brand-surface`: #101010 - 카드 배경 (거의 검정)
+- `brand-surfaceHover`: #161616 - 호버 시 배경
+- `brand-border`: #1A1A1A - 테두리 (미묘한 구분)
+- `brand-borderHover`: #333333 - 호버 시 테두리
+- `brand-divider`: #262626 - 구분선
+
+### 텍스트
+- `brand-text`: #FFFFFF - 주요 텍스트 (밝은 화이트)
+- `brand-textSecondary`: #A1A1AA - 보조 텍스트
+- `brand-textTertiary`: #636366 - 세 번째 텍스트
+
+### 강조 컬러
+- `brand-primary`: #6366F1 - 주요 강조색 (인디고)
+- `brand-primaryHover`: #4F46E5 - 진한 버전
+- `brand-primaryActive`: #4338CA - 더 진한 버전
+- `brand-primaryFocus`: rgba(99, 102, 241, 0.3) - 포커스 링
+
+### 액센트 컬러
+- `brand-secondary`: #9333EA - 보조 강조색 (퍼플)
+- `brand-secondaryHover`: #7E22CE - 호버
+- `brand-accent`: #06B6D4 - 액센트 (시안)
+- `brand-accentHover`: #0891B2 - 호버
+
+### 상태 컬러
+- `brand-success`: #10B981 - 성공
+- `brand-warning`: #F59E0B - 경고
+- `brand-error`: #EF4444 - 오류
+- `brand-info`: #3B82F6 - 정보
+
+### 특별 컬러
+- `brand-highlight`: rgba(99, 102, 241, 0.1) - 강조 배경
+- `brand-glass`: rgba(10, 10, 10, 0.5) - 글래스 효과
+
+## 🖌️ 타이포그래피
+- 기본 폰트: Pretendard를 기본으로 사용하며, 시스템 폰트를 대체로 사용
+- 폰트 크기:
+  - xs: 0.75rem (12px)
+  - sm: 0.875rem (14px) 
+  - base: 1rem (16px)
+  - lg: 1.125rem (18px)
+  - xl: 1.25rem (20px)
+  - 2xl: 1.5rem (24px)
+  - 3xl: 1.875rem (30px)
+  - 4xl: 2.25rem (36px)
+
+## 🧩 컴포넌트 스타일
+### 버튼
+- **기본 버튼**: `bg-brand-primary text-brand-text rounded-md hover:bg-brand-primaryHover transition-all`
+- **보조 버튼**: `border border-brand-border rounded-md text-brand-textSecondary bg-brand-surface hover:bg-brand-surfaceHover`
+- **아이콘 버튼**: `p-2 rounded-md hover:bg-brand-surfaceHover transition-all`
+
+### 입력 필드
+```jsx
+<input 
+  className={cn(
+    "w-full px-3 py-2 bg-brand-surface border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-primary/70",
+    errors.field 
+      ? "border-brand-error text-brand-error" 
+      : "border-brand-border text-brand-text hover:border-brand-borderHover"
+  )}
+/>
+```
+
+### 카드
+- 기본 카드: `bg-brand-surface border border-brand-border rounded-lg overflow-hidden shadow-dark`
+- 호버 카드: `hover:border-brand-borderHover transition-all duration-200`
+
+### 로딩 표시
+```jsx
+<div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand-primary"></div>
+```
+
+## 🧠 유틸리티 함수
+- `cn()`: tailwind 클래스를 조건부로 결합하는 유틸리티 함수
+```tsx
+import { cn } from '@/lib/utils';
+
+<div className={cn(
+  "base-class", 
+  condition && "conditional-class"
+)}>
+```
+
+## 📐 간격 및 레이아웃
+- 페이지 최대 너비: `max-w-6xl mx-auto`
+- 섹션 간격: `py-8 px-4`
+- 컴포넌트 간격: `space-y-6`, `mb-6`
+- 그리드 레이아웃: `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`
+
+## 🔄 애니메이션 및 전환
+- fade-in: `animate-fade-in`
+- slide-up: `animate-slide-up`
+- slide-down: `animate-slide-down`
+- 표준 전환: `transition-all duration-200`
+
+## 🛠️ 반응형 가이드
+- 모바일 우선: 모든 디자인은 모바일부터 시작하여 더 큰 화면으로 확장
+- 주요 브레이크포인트:
+  - sm: 640px+
+  - md: 768px+
+  - lg: 1024px+
+  - xl: 1280px+
+
+## 🚀 구현 시 모범 사례
+1. 모든 UI 요소에는 브랜드 색상 시스템 활용
+2. 폼 컴포넌트에서는 반드시 오류 상태 스타일 추가
+3. 카드 및 컨테이너에는 항상 border와 rounded 적용
+4. 사용자 액션 버튼에는 hover 상태와 transition 추가
+5. 로딩 상태와 오류 상태를 위한 일관된 디자인 패턴 사용
