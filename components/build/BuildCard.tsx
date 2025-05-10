@@ -163,19 +163,22 @@ export default function BuildCard({
         )}
         
         {/* 소스 링크 표시 */}
-        {build.source_url && (
-          <div className="mb-4">
-            <a 
-              href={build.source_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-sm text-brand-primary hover:text-brand-primaryHover transition-colors flex items-center"
-            >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              {getLinkLabel(build.source_url)}
-            </a>
+        {build.source_urls && build.source_urls.length > 0 && (
+          <div className="mb-4 space-y-1">
+            {build.source_urls.map((url, index) => (
+              <a 
+                key={index}
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-brand-primary hover:text-brand-primaryHover transition-colors flex items-center"
+              >
+                <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span className="break-all">{getLinkLabel(url)}</span>
+              </a>
+            ))}
           </div>
         )}
         

@@ -1,11 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabase';
-import { OpenAI } from 'openai';
 import { z } from 'zod';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIAnalysis } from '@/lib/openai';
+import { BuildFormValues } from '@/types/build';
 
 // 파일 분석 요청 스키마
 const fileAnalysisSchema = z.object({
@@ -19,7 +16,7 @@ const fileAnalysisSchema = z.object({
 type ResponseData = {
   success: boolean;
   message?: string;
-  data?: any;
+  data?: BuildFormValues;
   error?: string;
 };
 
@@ -158,7 +155,7 @@ function generateFallbackBuildInfo(files: any[]): any {
     outcomes: `이 ${category}의 성과를 입력해주세요. 완성된 결과물, 달성한 목표, 또는 긍정적인 피드백 등을 기록하면 좋습니다.`,
     category: category,
     tags: tags,
-    source_url: null,
+    source_urls: [],
     ai_generated: true
   };
 }
@@ -183,62 +180,49 @@ async function generateBuildInfoFromFiles(files: any[]): Promise<any> {
     }
     
     const prompt = `
-    다음 텍스트 파일들을 분석하여 아래 포맷으로 프로젝트/활동 정보를 생성해주세요:
+다음 텍스트 파일들을 분석하여 프로젝트/활동에 관한 주요 정보를 추출해주세요:
+
+파일 정보:
+${combinedContent}
+
+제공된 파일 콘텐츠를 분석하여 프로젝트/활동에 관한 주요 정보를 추출해주세요.
+다음 측면에 초점을 맞추어 자세한 설명을 제공해주세요:
+
+1. 활동/프로젝트 개요: 무엇에 관한 것인지, 주요 목적이나 의의는 무엇인지
+2. 주요 기술이나 도구: 사용된 기술, 방법론, 도구 등
+3. 역할과 책임: 이 프로젝트에서 맡은 역할이나 기여도
+4. 주요 성과나 결과: 프로젝트의 결과물, 성취, 영향력
+5. 기간: 시작일과 종료일 (추측 가능하면 제안)
+6. 관련 키워드: 이 활동/프로젝트를 가장 잘 설명하는 키워드 (5개 이내)
+
+각 섹션을 구분하여 자세히 설명해주시고, 직접적인 증거가 없는 내용은 "정보가 부족합니다"라고 명시해주세요.
+가능한 많은 세부 정보를 포함하되, 신뢰할 수 있는 정보만 제공해주세요.
+`;
     
-    파일 정보:
-    ${combinedContent}
+    // OpenAI API 호출
+    const aiResponse = await getOpenAIAnalysis(prompt);
     
-    다음 정보를 JSON 형식으로 제공해주세요:
-    1. title: 프로젝트/활동 제목 (간결하고 명확하게)
-    2. description: 프로젝트/활동에 대한 간략한 설명 (3-5문장)
-    3. role: 해당 프로젝트에서의 역할 (1-2문장)
-    4. duration_start: 시작 날짜 (YYYY-MM-DD 형식, 추측 가능하면 ${currentDate}에서 3개월 전)
-    5. duration_end: 종료 날짜 (진행 중이면 null)
-    6. lesson: 이 활동을 통해 배운 점 (2-3문장)
-    7. outcomes: 이 활동의 성과 (2-3문장)
-    8. category: 카테고리 (대외활동, 인턴, 수상, 프로젝트, 동아리, 자격증, 교육, 기타 중 하나)
-    9. tags: 관련 태그 (최대 5개, 배열 형식)
-    
-    파일 내용에서 최대한 많은 정보를 추출하여 적절한 값을 생성해주세요.
-    JSON 형식으로만 응답해주세요.
-    `;
-    
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "너는 텍스트 파일을 분석하여 프로젝트/활동 정보를 추출하는 전문가야. JSON 형식으로 응답해."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-    
-    const responseText = response.choices[0].message.content?.trim() || '';
-    
-    // JSON 추출 (중괄호로 시작하고 끝나는 부분 추출)
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('유효한 JSON 형식의 응답을 받지 못했습니다.');
+    if (!aiResponse) {
+      throw new Error('AI 분석 응답을 받지 못했습니다.');
     }
     
-    const jsonStr = jsonMatch[0];
-    const buildInfo = JSON.parse(jsonStr);
-    
-    // AI가 생성했음을 표시
-    buildInfo.ai_generated = true;
-    
-    // 빈 문자열인 경우 null로 변환
-    if (buildInfo.duration_end === '') buildInfo.duration_end = null;
-    
-    return buildInfo;
+    // 분석 결과를 기본 BuildFormValues 형식으로 반환
+    return {
+      title: '파일 기반 분석',  // combine-analysis에서 최종 결정
+      description: aiResponse,  // 분석 결과 원본을 설명에 임시 저장
+      duration_start: new Date().toISOString().split('T')[0], // 오늘 날짜
+      duration_end: '',
+      category: '기타',
+      tags: [],
+      is_public: true,
+      role: '',
+      lesson: '',
+      outcomes: '',
+      source_urls: [],
+      ai_generated: true
+    };
   } catch (error) {
     console.error('OpenAI API 호출 오류:', error);
-    throw error;
+    throw error; // 오류를 상위로 전파하여 fallback 로직에서 처리
   }
 } 

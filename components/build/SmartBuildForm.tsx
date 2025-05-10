@@ -18,8 +18,13 @@ export default function SmartBuildForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sourceUrl, setSourceUrl] = useState<string>(build?.source_url || '');
+  const [sourceUrl, setSourceUrl] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // 링크 분석 결과와 파일 분석 결과를 각각 저장하는 상태
+  const [linkAnalysisResult, setLinkAnalysisResult] = useState<any>(null);
+  const [fileAnalysisResult, setFileAnalysisResult] = useState<any>(null);
+  
   const [buildData, setBuildData] = useState<BuildFormValues | null>(
     build ? {
       title: build.title || '',
@@ -30,7 +35,7 @@ export default function SmartBuildForm({
       tags: build.tags || [],
       image_url: build.image_url || '',
       is_public: build.is_public !== undefined ? build.is_public : true,
-      source_url: build.source_url || '',
+      source_urls: build.source_urls || [],
       role: build.role || '',
       lesson: build.lesson || '',
       outcomes: build.outcomes || '',
@@ -113,7 +118,7 @@ export default function SmartBuildForm({
           'Content-Type': 'application/json',
           'Authorization': accessToken ? `Bearer ${accessToken}` : '',
         },
-        body: JSON.stringify({ url: sourceUrl }),
+        body: JSON.stringify({ urls: [sourceUrl] }),
       });
       
       const result = await response.json();
@@ -122,8 +127,17 @@ export default function SmartBuildForm({
         throw new Error(result.error || '링크 분석 중 오류가 발생했습니다');
       }
       
-      // 분석 결과 반영
-      setBuildData(result.data);
+      // 링크 분석 결과 저장
+      setLinkAnalysisResult(result.data);
+      
+      // 파일 분석 결과가 있으면 함께 통합하여 BUILD 데이터 생성
+      if (fileAnalysisResult) {
+        // 두 데이터를 GPT를 통해 통합
+        await combineAnalysisResults(result.data, fileAnalysisResult);
+      } else {
+        // 링크 분석 결과만 있는 경우 그대로 사용
+        setBuildData(result.data);
+      }
       
       // API에서 전달한 메시지가 있으면 표시 (예: OpenAI API 오류 시)
       if (result.message) {
@@ -214,8 +228,17 @@ export default function SmartBuildForm({
         throw new Error(result.error || '파일 분석 중 오류가 발생했습니다');
       }
       
-      // 분석 결과 반영
-      setBuildData(result.data);
+      // 파일 분석 결과 저장
+      setFileAnalysisResult(result.data);
+      
+      // 링크 분석 결과가 있으면 함께 통합하여 BUILD 데이터 생성
+      if (linkAnalysisResult) {
+        // 두 데이터를 GPT를 통해 통합
+        await combineAnalysisResults(linkAnalysisResult, result.data);
+      } else {
+        // 파일 분석 결과만 있는 경우 그대로 사용
+        setBuildData(result.data);
+      }
       
       // API에서 전달한 메시지가 있으면 표시 (예: OpenAI API 오류 시)
       if (result.message) {
@@ -233,6 +256,78 @@ export default function SmartBuildForm({
   // 업로드된 파일 삭제
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // GPT를 통해 링크 분석과 파일 분석 결과를 통합
+  const combineAnalysisResults = async (linkData: any, fileData: any) => {
+    try {
+      setIsAnalyzing(true);
+      
+      // 액세스 토큰 가져오기
+      const accessToken = localStorage.getItem('access_token');
+      
+      // 통합 API 호출
+      const response = await fetch('/api/builds/combine-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': accessToken ? `Bearer ${accessToken}` : '',
+        },
+        body: JSON.stringify({ 
+          linkAnalysis: linkData,
+          fileAnalysis: fileData
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || '분석 결과 통합 중 오류가 발생했습니다');
+      }
+      
+      // 통합된 결과 설정
+      setBuildData(result.data);
+      
+      if (result.message) {
+        setError(result.message);
+      }
+      
+    } catch (err: any) {
+      console.error('분석 결과 통합 오류:', err);
+      // 통합에 실패한 경우 기본 통합 로직 사용
+      generateFallbackBuildData(linkData, fileData);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+  
+  // 통합 API 호출 실패시 사용할 기본 통합 로직
+  const generateFallbackBuildData = (linkData: any, fileData: any) => {
+    // 기본값 설정
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    // 태그 통합 (중복 제거, 최대 5개)
+    const linkTags = Array.isArray(linkData.tags) ? linkData.tags : [];
+    const fileTags = Array.isArray(fileData.tags) ? fileData.tags : [];
+    const combinedTags = Array.from(new Set([...linkTags, ...fileTags])).slice(0, 5);
+    
+    const combinedData: BuildFormValues = {
+      title: linkData.title || fileData.title || 'Untitled Build',
+      description: linkData.description || fileData.description || '',
+      duration_start: linkData.duration_start || fileData.duration_start || currentDate,
+      duration_end: linkData.duration_end || fileData.duration_end || '',
+      category: linkData.category || fileData.category || '기타',
+      tags: combinedTags,
+      image_url: linkData.image_url || fileData.image_url || '',
+      is_public: true,
+      source_urls: linkData.source_urls || [],
+      role: linkData.role || fileData.role || '',
+      lesson: linkData.lesson || fileData.lesson || '',
+      outcomes: linkData.outcomes || fileData.outcomes || '',
+      ai_generated: true
+    };
+    
+    setBuildData(combinedData);
   };
   
   // 블록 수정 처리 - 인라인 편집 기능
@@ -425,6 +520,14 @@ export default function SmartBuildForm({
                   )}
                 </button>
               </div>
+              {linkAnalysisResult && (
+                <div className="mt-3 text-xs text-brand-success flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  링크 분석이 완료되었습니다
+                </div>
+              )}
             </div>
             
             <div>
@@ -497,6 +600,14 @@ export default function SmartBuildForm({
                   <p className="text-xs text-brand-textTertiary mt-2">
                     txt, md, csv 등 텍스트 파일만 지원합니다. 파일당 최대 3,000자까지 분석됩니다.
                   </p>
+                  {fileAnalysisResult && (
+                    <div className="mt-3 text-xs text-brand-success flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      파일 분석이 완료되었습니다
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

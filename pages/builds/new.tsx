@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/layout/Layout';
-import SmartBuildForm from '@/components/build/SmartBuildForm';
+import BuildWizard from '@/components/build/wizard/BuildWizard';
 import { getClient } from '@/lib/supabase';
 
 export default function NewBuildPage() {
@@ -26,29 +26,10 @@ export default function NewBuildPage() {
           return;
         }
         
-        // 현재 사용자 정보 저장
         setUser(session.user);
-        
-        // 사용자 프로필 정보 가져오기
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('프로필 정보 조회 오류:', profileError);
-          return;
-        }
-        
-        // 프로필 설정이 완료되지 않았으면 onboarding 페이지로 리다이렉트
-        if (!profile || !profile.username) {
-          router.push('/onboarding');
-          return;
-        }
-      } catch (err) {
-        console.error('인증 체크 오류:', err);
-        setError('인증 정보를 확인하는 중 오류가 발생했습니다.');
+      } catch (err: any) {
+        console.error('인증 오류:', err);
+        setError(err.message || '인증 확인 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
       }
@@ -57,76 +38,45 @@ export default function NewBuildPage() {
     checkAuth();
   }, [router]);
   
-  const handleComplete = () => {
-    router.push('/dashboard');
+  // Build 생성 완료 처리
+  const handleBuildComplete = () => {
+    router.push('/builds');
   };
   
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen bg-brand-base">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand-primary mx-auto mb-4"></div>
-            <p className="text-brand-textSecondary text-sm">로딩 중...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  if (error) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-brand-base flex items-center justify-center px-4">
-          <div className="bg-brand-surface border border-brand-border rounded-lg p-8 max-w-md w-full shadow-dark">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-brand-error/10 mb-6 mx-auto">
-              <svg className="w-6 h-6 text-brand-error" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            <h1 className="text-xl font-bold text-brand-text mb-2 text-center">오류 발생</h1>
-            <p className="text-brand-textSecondary text-center mb-6">{error}</p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full px-4 py-2 bg-brand-primary text-brand-text rounded-md hover:bg-brand-primaryHover transition-all text-sm font-medium"
-            >
-              대시보드로 이동
-            </button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  if (!user) {
-    return null; // 로그인 체크 중
-  }
-  
   return (
-    <Layout title="새 Build 추가 - Builders">
+    <>
       <Head>
-        <meta name="description" content="새로운 Build 활동을 추가하세요." />
+        <title>새 Build 만들기 | Builders</title>
+        <meta name="description" content="새로운 빌드를 생성하고 포트폴리오에 추가하세요." />
       </Head>
       
-      <div className="bg-brand-base min-h-screen py-8 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center mb-6">
-            <button 
-              onClick={() => router.back()} 
-              className="p-2 mr-3 rounded-md hover:bg-brand-surfaceHover transition-all"
-            >
-              <svg className="w-5 h-5 text-brand-textSecondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-              </svg>
-            </button>
-            <h1 className="text-xl font-semibold text-brand-text">새 Build 추가</h1>
+      <Layout>
+        {loading ? (
+          <div className="container max-w-4xl mx-auto px-4 py-12">
+            <div className="flex flex-col items-center justify-center min-h-[300px]">
+              <div className="relative w-16 h-16">
+                <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-brand-primary/30 border-t-brand-primary animate-spin"></div>
+              </div>
+              <p className="mt-4 text-brand-textSecondary">로딩 중...</p>
+            </div>
           </div>
-          
-          <div className="bg-brand-surface border border-brand-border rounded-lg overflow-hidden shadow-dark">
-            <SmartBuildForm userId={user.id} onComplete={handleComplete} />
+        ) : error ? (
+          <div className="container max-w-4xl mx-auto px-4 py-12">
+            <div className="bg-brand-error/10 p-4 rounded-md text-sm text-brand-error border border-brand-error/20">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{error}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </Layout>
+        ) : user ? (
+          <div className="container max-w-4xl mx-auto px-4 py-8">
+            <BuildWizard userId={user.id} onComplete={handleBuildComplete} />
+          </div>
+        ) : null}
+      </Layout>
+    </>
   );
 } 

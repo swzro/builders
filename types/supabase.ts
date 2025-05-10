@@ -60,11 +60,13 @@ export interface Database {
           image_url: string | null
           is_public: boolean
           created_at: string
-          source_url: string | null
+          source_urls: string[] | null
           role: string | null
           lesson: string | null
           outcomes: string | null
           ai_generated: boolean | null
+          status: string | null
+          step: number | null
         }
         Insert: {
           id?: string
@@ -78,11 +80,13 @@ export interface Database {
           image_url?: string | null
           is_public?: boolean
           created_at?: string
-          source_url?: string | null
+          source_urls?: string[] | null
           role?: string | null
           lesson?: string | null
           outcomes?: string | null
           ai_generated?: boolean | null
+          status?: string | null
+          step?: number | null
         }
         Update: {
           id?: string
@@ -96,11 +100,48 @@ export interface Database {
           image_url?: string | null
           is_public?: boolean
           created_at?: string
-          source_url?: string | null
+          source_urls?: string[] | null
           role?: string | null
           lesson?: string | null
           outcomes?: string | null
           ai_generated?: boolean | null
+          status?: string | null
+          step?: number | null
+        }
+      }
+      build_files: {
+        Row: {
+          id: string
+          build_id: string
+          user_id: string
+          file_name: string
+          file_type: string
+          file_size: number
+          file_path: string
+          content_preview: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          build_id: string
+          user_id: string
+          file_name: string
+          file_type: string
+          file_size: number
+          file_path: string
+          content_preview?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          build_id?: string
+          user_id?: string
+          file_name?: string
+          file_type?: string
+          file_size?: number
+          file_path?: string
+          content_preview?: string | null
+          created_at?: string
         }
       }
     }
